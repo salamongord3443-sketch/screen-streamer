@@ -1,45 +1,46 @@
-import threading
-import time
-import requests
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.label import Label
+import urllib.request
+import json
 
-# Ваш токен ngrok
-NGROK_TOKEN = "3IH93HDfDr9rW7Ycdfk1lLZ5vid_5J3n8o3EHibiFEPhMgMiu"
-
-class StreamApp(App):
+class JarvisApp(App):
     def build(self):
-        self.layout = BoxLayout(orientation='vertical', padding=50, spacing=20)
+        self.title = "CYBER-JARVIS"
         
-        self.status_label = Label(text='Статус: Готов к трансляции', font_size=20)
-        self.layout.add_widget(self.status_label)
+        layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
         
-        self.btn = Button(text='Запустить трансляцию', font_size=18, size_hint=(1, 0.3))
-        self.btn.bind(on_press=self.toggle_stream)
-        self.layout.add_widget(self.btn)
+        self.label = Label(text="Система готова", font_size=20, size_hint=(1, 0.2))
+        layout.add_widget(self.label)
         
-        self.is_streaming = False
-        return self.layout
+        self.input_text = TextInput(hint_text="Введите запрос для Джарвиса...", multiline=False, size_hint=(1, 0.2))
+        layout.add_widget(self.input_text)
+        
+        btn = Button(text="Отправить", size_hint=(1, 0.2), background_color=(0, 0.7, 1, 1))
+        btn.bind(on_press=self.send_request)
+        layout.add_widget(btn)
+        
+        return layout
 
-    def toggle_stream(self, instance):
-        if not self.is_streaming:
-            self.is_streaming = True
-            self.btn.text = 'Остановить трансляцию'
-            self.status_label.text = 'Статус: Трансляция активна!'
-            threading.Thread(target=self.stream_loop, daemon=True).start()
-        else:
-            self.is_streaming = False
-            self.btn.text = 'Запустить трансляцию'
-            self.status_label.text = 'Статус: Остановлено'
-
-    def stream_loop(self):
-        # Здесь будет цикл захвата кадров с экрана Android
-        while self.is_streaming:
-            # На Android здесь будет вызываться Python-мост к MediaProjection API
-            print("Передача кадров экрана на сервер...")
-            time.sleep(0.1)
+    def send_request(self, instance):
+        query = self.input_text.text
+        if not query:
+            return
+        
+        self.label.text = "Отправка запроса..."
+        
+        try:
+            url = "http://192.168.0.106:8000/api" 
+            data = json.dumps({"query": query}).encode('utf-8')
+            
+            req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+            with urllib.request.urlopen(req, timeout=5) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                self.label.text = f"Ответ: {res.get('result', 'OK')}"
+        except Exception as e:
+            self.label.text = "Ошибка связи с ПК"
 
 if __name__ == '__main__':
-    StreamApp().run()
+    JarvisApp().run()
